@@ -1,3 +1,4 @@
-FROM ubuntu:20.04
-RUN apt update && apt install -y python-is-python3 python3 python3-pip
-RUN python -m pip install torch torchvision lmdb wget requests tqdm
+FROM ufoym/deepo:pytorch-py36
+COPY ./requirements.txt /root/requirements.txt
+WORKDIR /root
+RUN pip install -r requirements.txt

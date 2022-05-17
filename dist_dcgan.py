@@ -18,7 +18,7 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.main = nn.Sequential(
             # input is Z, going into a convolution
-            nn.ConvTranspose2d(nz, ngf * 8, 4, 1, 0, bias=False),
+            nn.ConvTranspose2d(     nz, ngf * 8, 4, 1, 0, bias=False),
             nn.BatchNorm2d(ngf * 8),
             nn.ReLU(True),
             # state size. (ngf*8) x 4 x 4
@@ -30,11 +30,11 @@ class Generator(nn.Module):
             nn.BatchNorm2d(ngf * 2),
             nn.ReLU(True),
             # state size. (ngf*2) x 16 x 16
-            nn.ConvTranspose2d(ngf * 2, ngf, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(ngf * 2,     ngf, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ngf),
             nn.ReLU(True),
             # state size. (ngf) x 32 x 32
-            nn.ConvTranspose2d(ngf, nc, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(    ngf,      nc, 4, 2, 1, bias=False),
             nn.Tanh()
             # state size. (nc) x 64 x 64
         )
@@ -70,27 +70,24 @@ class Discriminator(nn.Module):
         return self.main(input).view(-1, 1).squeeze(1)
 
 
-def get_dataset(dataset_name: str, dataroot: str, image_size: int, download: bool = False, train: bool = True):
+def get_dataset(dataset_name: str, dataroot: str, image_size: int):
     if dataset_name in ['imagenet', 'folder', 'lfw']:
         # folder dataset
         dataset = dset.ImageFolder(
-            root=dataroot, train=train,
-            transform=transforms.Compose([
+            root=dataroot, transform=transforms.Compose([
                 transforms.Resize(image_size), transforms.CenterCrop(image_size),
                 transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), \
                     (0.5, 0.5, 0.5)),]))
         nc = 3
     elif dataset_name == 'cifar10':
         dataset = dset.CIFAR10(
-            root=dataroot, download=download, train=train,
-            transform=transforms.Compose([
+            root=dataroot, download=False, transform=transforms.Compose([
                 transforms.Resize(image_size), transforms.ToTensor(),
                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),]))
         nc=3
     elif dataset_name == 'mnist':
         dataset = dset.MNIST(
-            root=dataroot, download=download, train=train,
-            transform=transforms.Compose([
+        root=dataroot, download=False, transform=transforms.Compose([
                 transforms.Resize(image_size), transforms.ToTensor(),
                 transforms.Normalize((0.5,), (0.5,)),]))
         nc=1
@@ -127,13 +124,11 @@ def main():
                         torch.distributed.launch utility.")
     parser.add_argument("--num_epochs", type=int, help="Number of training epochs.", \
                         default=25)
-    parser.add_argument("--download", action="store_true", help="Download dataset")
     parser.add_argument("--batch_size", type=int, help="Training batch size for one process.",\
                         default=32)
     parser.add_argument("--learning_rate", type=float, help="Learning rate.", default=0.0002)
     parser.add_argument('--image_size', type=int, default=64, help='The height / width of the \
                         input image to network')
-    parser.add_argument("--test_data", action="store_true", help="use test instead of train data")
     parser.add_argument('--seed', type=int, default=0, help='Set a manual random seed')
     parser.add_argument('--cuda', action='store_true', help='enables cuda')
     parser.add_argument('--beta1', type=float, default=0.5, help='Beta1 for adam.')
@@ -159,7 +154,7 @@ def main():
         os.makedirs(argv.out_folder, exist_ok=True)
 
     # Load datasets and wrap into Distributed Sampler
-    train_dataset, n_classes = get_dataset(argv.dataset, argv.dataroot, argv.image_size, argv.download, not argv.test_data)
+    train_dataset, n_classes = get_dataset(argv.dataset, argv.dataroot, argv.image_size)
     train_sampler = DistributedSampler(dataset=train_dataset)
     train_loader = DataLoader(dataset=train_dataset, batch_size=argv.batch_size, sampler=train_sampler, \
                                 num_workers=argv.max_workers)
